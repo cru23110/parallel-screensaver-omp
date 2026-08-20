@@ -1,0 +1,18 @@
+# Binarios y objetos (no se debe entregar ni versionar ejecutables)
+bin/
+build/
+*.o
+*.out
+screensaver_seq
+screensaver_par
+
+# Resultados de ejecución (se versiona el CSV final, no basura intermedia)
+resultados/*.tmp
+
+# Sistema
+.DS_Store
+*.swp
+
+# Editores
+.vscode/
+.idea/
