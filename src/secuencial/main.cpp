@@ -4,15 +4,28 @@
 // que se calcula el speedup.
 
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "screensaver.hpp"
 
 bool parseArgs(int argc, char** argv, Config& config) {
-    // TODO: leer -n, -w, -h, -frames, -seed desde argv.
-    // TODO: validar rangos (n > 0, width/height >= minimo, etc.) y rechazar
-    // entradas invalidas con un mensaje claro (programacion defensiva).
-    (void)argc;
-    (void)argv;
-    (void)config;
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
+            config.n = std::atoi(argv[++i]);
+        } else if (std::strcmp(argv[i], "-w") == 0 && i + 1 < argc) {
+            config.width = std::atoi(argv[++i]);
+        } else if (std::strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
+            config.height = std::atoi(argv[++i]);
+        } else if (std::strcmp(argv[i], "-frames") == 0 && i + 1 < argc) {
+            config.frames = std::atoi(argv[++i]);
+        } else if (std::strcmp(argv[i], "-seed") == 0 && i + 1 < argc) {
+            config.seed = static_cast<unsigned int>(std::strtoul(argv[++i], nullptr, 10));
+        }
+    }
+
+    // TODO (siguiente tarea): validar rangos (n > 0, width/height >= minimo,
+    // etc.) y rechazar entradas invalidas o flags desconocidos con un mensaje
+    // claro (programacion defensiva), en vez de ignorarlos en silencio.
     return true;
 }
 
