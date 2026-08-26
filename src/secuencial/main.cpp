@@ -10,22 +10,46 @@
 
 bool parseArgs(int argc, char** argv, Config& config) {
     for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
+        if (std::strcmp(argv[i], "-n") == 0) {
+            if (i + 1 >= argc) { std::fprintf(stderr, "Falta el valor de -n\n"); return false; }
             config.n = std::atoi(argv[++i]);
-        } else if (std::strcmp(argv[i], "-w") == 0 && i + 1 < argc) {
+        } else if (std::strcmp(argv[i], "-w") == 0) {
+            if (i + 1 >= argc) { std::fprintf(stderr, "Falta el valor de -w\n"); return false; }
             config.width = std::atoi(argv[++i]);
-        } else if (std::strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
+        } else if (std::strcmp(argv[i], "-h") == 0) {
+            if (i + 1 >= argc) { std::fprintf(stderr, "Falta el valor de -h\n"); return false; }
             config.height = std::atoi(argv[++i]);
-        } else if (std::strcmp(argv[i], "-frames") == 0 && i + 1 < argc) {
+        } else if (std::strcmp(argv[i], "-frames") == 0) {
+            if (i + 1 >= argc) { std::fprintf(stderr, "Falta el valor de -frames\n"); return false; }
             config.frames = std::atoi(argv[++i]);
-        } else if (std::strcmp(argv[i], "-seed") == 0 && i + 1 < argc) {
+        } else if (std::strcmp(argv[i], "-seed") == 0) {
+            if (i + 1 >= argc) { std::fprintf(stderr, "Falta el valor de -seed\n"); return false; }
             config.seed = static_cast<unsigned int>(std::strtoul(argv[++i], nullptr, 10));
+        } else {
+            std::fprintf(stderr, "Argumento desconocido: %s\n", argv[i]);
+            return false;
         }
     }
 
-    // TODO (siguiente tarea): validar rangos (n > 0, width/height >= minimo,
-    // etc.) y rechazar entradas invalidas o flags desconocidos con un mensaje
-    // claro (programacion defensiva), en vez de ignorarlos en silencio.
+    // Programacion defensiva: valores fuera de rango se rechazan aqui en vez
+    // de dejar que el programa arranque con datos sin sentido.
+    if (config.n <= 0) {
+        std::fprintf(stderr, "-n debe ser mayor a 0 (recibido: %d)\n", config.n);
+        return false;
+    }
+    if (config.width < 640) {
+        std::fprintf(stderr, "-w debe ser al menos 640 (recibido: %d)\n", config.width);
+        return false;
+    }
+    if (config.height < 480) {
+        std::fprintf(stderr, "-h debe ser al menos 480 (recibido: %d)\n", config.height);
+        return false;
+    }
+    if (config.frames < 0) {
+        std::fprintf(stderr, "-frames no puede ser negativo (recibido: %d)\n", config.frames);
+        return false;
+    }
+
     return true;
 }
 
