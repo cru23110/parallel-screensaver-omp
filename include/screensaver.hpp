@@ -18,6 +18,10 @@ struct Config {
     float trailFade = 0.15f;       // Opacidad del rectangulo de estela por frame (0-1)
     float connectDistance = 120.f; // Distancia maxima para dibujar linea de conexion
     float pulseSpeed = 2.0f;       // Velocidad del pulso de tamano/brillo (rad/s)
+
+    bool showClock = true; // Muestra la hora arriba (extra, requiere SDL2_ttf).
+                            // Aun no esta conectado a un flag de CLI: agregarlo
+                            // cuando se implemente el dibujo del reloj.
 };
 
 struct Element {
