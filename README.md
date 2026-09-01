@@ -56,6 +56,7 @@ El enunciado completo está en [`docs/enunciado.pdf`](docs/enunciado.pdf).
 
 - Compilador con soporte C++17 y OpenMP (`g++` en Linux/macOS con GCC; en macOS con `clang` de Apple hay que instalar `libomp` o usar `brew install gcc`).
 - [SDL2](https://www.libsdl.org/) para el renderizado (`brew install sdl2` / `apt install libsdl2-dev`).
+- [SDL2_ttf](https://github.com/libsdl-org/SDL_ttf) para dibujar el reloj en pantalla (`brew install sdl2_ttf` / `apt install libsdl2-ttf-dev`). Es una dependencia extra solo para esa parte del diseño visual — si complica la compilación en alguna máquina, se puede desactivar con `Config::showClock` y quitarla del build.
 
 ## Compilación
 
