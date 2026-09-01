@@ -1,0 +1,8 @@
+## Partición, Comunicación, Aglomeración y Mapeo (PCAM)
+
+Para paralelizar el screensaver, se empleó la metodología PCAM sobre la actualización física de los elementos (función `stepSimulation`):
+
+1. **Partición**: El dominio del problema se divide en los elementos individuales de la simulación. En `integrate`, el cálculo de la nueva posición y rebote se divide elemento por elemento, resultando en tareas independientes. Para `resolveCollisions` y `buildLinks`, la partición se da por pares de elementos, dividiendo el espacio de combinaciones posibles en tareas más pequeñas.
+2. **Comunicación**: Durante `integrate`, la comunicación es nula ya que cada elemento se actualiza de manera independiente. Sin embargo, en `resolveCollisions`, cuando dos elementos chocan, existe la necesidad de comunicar y actualizar la velocidad de ambos, lo cual requiere protección en memoria compartida para evitar condiciones de carrera. En `buildLinks`, se requiere comunicación al momento de agregar los enlaces (links) al vector global de la simulación.
+3. **Aglomeración**: Para minimizar el sobrecosto (overhead) de creación de tareas en OpenMP, las tareas individuales no se ejecutan una a una como hilos separados, sino que se aglomeran a nivel de los ciclos `for`. OpenMP toma conjuntos de iteraciones del ciclo y los asigna a un hilo.
+4. **Mapeo**: La asignación de estas iteraciones a los núcleos del procesador se maneja a través del programador (scheduler) de OpenMP. En particular, para `resolveCollisions` y `buildLinks`, se utilizó `schedule(dynamic)` porque la carga de trabajo de los ciclos anidados disminuye a medida que avanza el contador, lo que equilibra el trabajo entre los hilos de manera más justa que un mapeo estático.
