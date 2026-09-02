@@ -151,6 +151,17 @@ bool pollQuitRequest() {
         } else if (event.type == SDL_KEYDOWN) {
             const SDL_Keycode key = event.key.keysym.sym;
             if (key == SDLK_ESCAPE || key == SDLK_q) quit = true;
+        } else if (event.type == SDL_WINDOWEVENT &&
+                   (event.window.event == SDL_WINDOWEVENT_RESIZED ||
+                    event.window.event == SDL_WINDOWEVENT_MAXIMIZED)) {
+            // La ventana no se crea con SDL_WINDOW_RESIZABLE a proposito: el
+            // tamano del canvas se fija con -w/-h al arrancar, no arrastrando
+            // el borde. Pero algunos gestores de ventanas (WSLg, por ejemplo)
+            // igual permiten maximizar con el boton, y ahi el contenido se
+            // queda a medio ajustar. Se restaura el tamano original apenas se
+            // detecta, en vez de dejar la ventana en ese estado roto.
+            SDL_Window* win = SDL_GetWindowFromID(event.window.windowID);
+            if (win != nullptr) SDL_RestoreWindow(win);
         }
     }
 
