@@ -1,17 +1,24 @@
 // Fisica del screensaver, version PARALELA.
 //
-// PENDIENTE - Fase 2, paso 2 (ver PLAN.md): esto es todavia una copia
-// identica de src/secuencial/physics.cpp, sin una sola directiva de OpenMP.
-// El paso 1 de la fase es dejar esta copia compilando y corriendo igual que
-// la secuencial; el paso 2 reparte estos tres bucles entre hilos:
+// Fase 2 (ver PLAN.md), avance parcial: se reparte entre hilos el bucle mas
+// simple de los tres, integrate(), porque cada elemento se mueve sin
+// depender de los demas (reparto directo, sin condicion de carrera posible).
+// Quedan pendientes, a proposito, los otros dos:
 //
-//   1. integrate()          - mover y rotar cada elemento, rebotar en bordes. O(N)
-//   2. resolveCollisions()  - choques elasticos entre elementos.              O(N^2)
-//   3. buildLinks()         - lineas de conexion de la constelacion.          O(N^2)
+//   1. integrate()          - mover y rotar cada elemento, rebotar en bordes. O(N)   [PARALELIZADO]
+//   2. resolveCollisions()  - choques elasticos entre elementos.              O(N^2) [PENDIENTE - Juan]
+//   3. buildLinks()         - lineas de conexion de la constelacion.          O(N^2) [PENDIENTE - Juan]
 //
-// El orden importa: primero se mueve, luego se corrigen los solapamientos que
-// ese movimiento produjo, y al final se miden distancias sobre las posiciones
-// ya corregidas, para que las lineas coincidan con lo que se ve dibujado.
+// resolveCollisions() necesita un mecanismo de proteccion de memoria
+// compartida porque cada par de elementos que choca escribe sobre DOS
+// elementos a la vez; buildLinks() necesita que los hilos no se pisen al
+// escribir en el mismo vector de salida (sim.links). Fabian todavia tiene
+// pendiente ajustar el schedule de integrate() si hace falta (ver PLAN.md).
+//
+// El orden entre las tres etapas importa: primero se mueve, luego se
+// corrigen los solapamientos que ese movimiento produjo, y al final se miden
+// distancias sobre las posiciones ya corregidas, para que las lineas
+// coincidan con lo que se ve dibujado.
 
 #include <cmath>
 
@@ -25,12 +32,19 @@ namespace {
 constexpr float kMinSeparation = 1e-4f;
 
 // Mueve y gira cada elemento un paso de tiempo, y lo rebota si toco un borde.
+//
+// Cada iteracion solo lee y escribe el elemento 'i': no hay dato compartido
+// entre iteraciones, asi que repartirlas entre hilos con un simple
+// "parallel for" es seguro sin ningun mecanismo de sincronizacion adicional.
 void integrate(Simulation& sim, const Config& config, float dt) {
     const float width = static_cast<float>(config.width);
     const float height = static_cast<float>(config.height);
     const float twoPi = 2.0f * kPi;
+    const int count = static_cast<int>(sim.elements.size());
 
-    for (Element& e : sim.elements) {
+    #pragma omp parallel for
+    for (int i = 0; i < count; ++i) {
+        Element& e = sim.elements[i];
         e.x += e.vx * dt;
         e.y += e.vy * dt;
 

@@ -1,19 +1,14 @@
 // Screensaver, version PARALELA con OpenMP.
 //
-// PENDIENTE - Fase 2, paso 2 (ver PLAN.md): todavia no hay ninguna directiva
-// de OpenMP aqui. Este archivo es el resultado del paso 1: una copia de
-// src/secuencial/main.cpp que compila y corre igual, para confirmar que el
-// punto de partida es correcto antes de repartir nada entre hilos.
-//
-// El paso 2 reparte stepSimulation() (en physics.cpp, tambien copiado tal
-// cual por ahora) entre hilos siguiendo PCAM: integrate() es el reparto
-// directo (un elemento por iteracion, sin dependencias entre ellas),
-// resolveCollisions() necesita proteccion porque cada par escribe en dos
-// elementos, y buildLinks() necesita que los hilos no se pisen al escribir en
-// el mismo vector de salida.
+// Fase 2 (ver PLAN.md), avance parcial: integrate() ya se reparte entre
+// hilos (ver src/paralelo/physics.cpp). resolveCollisions() y buildLinks()
+// siguen secuenciales a proposito, pendientes para Juan y Fabian: son las
+// dos partes que de verdad necesitan un mecanismo de sincronizacion.
 
 #include <cstdio>
 #include <string>
+
+#include <omp.h>
 
 #include "metrics.hpp"
 #include "render.hpp"
@@ -38,17 +33,22 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // -t en 0 (default) deja que OpenMP decida cuantos hilos usar; cualquier
+    // otro valor lo fija explicitamente antes de entrar al ciclo principal.
+    if (config.threads > 0) {
+        omp_set_num_threads(config.threads);
+    }
+
     Simulation sim = createSimulation(config);
 
     Renderer renderer;
     if (!renderer.init(config)) return 1;
 
     Metrics metrics;
-    // Todavia no hay ninguna directiva de OpenMP (eso es el paso 2 de esta
-    // fase), asi que en la practica esto sigue corriendo en un solo hilo sin
-    // importar lo que pida -t. Cuando se agregue el reparto real, esto pasa a
-    // ser omp_get_max_threads().
-    metrics.threads = 1;
+    // Hilos que OpenMP va a usar de verdad, no lo que se pidio con -t (que
+    // puede ser 0 = "decida OpenMP"). Con resolveCollisions() y buildLinks()
+    // todavia secuenciales, solo integrate() aprovecha estos hilos por ahora.
+    metrics.threads = omp_get_max_threads();
 
     Stopwatch runTimer;    // Duracion total del ciclo principal.
     Stopwatch stageTimer;  // Se reinicia en cada etapa para medirla aparte.
