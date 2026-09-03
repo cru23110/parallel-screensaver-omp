@@ -19,9 +19,7 @@ PAR_SRC    := $(COMMON_SRC) $(wildcard src/paralelo/*.cpp)
 
 .PHONY: all secuencial paralelo clean
 
-# La Fase 1 solo entrega la version secuencial. Cuando la Fase 2 agregue
-# src/paralelo/physics.cpp, cambiar esta linea por: all: secuencial paralelo
-all: secuencial
+all: secuencial paralelo
 
 secuencial: $(BIN_DIR)/screensaver_seq
 
