@@ -1,9 +1,9 @@
 // Screensaver, version PARALELA con OpenMP.
 //
-// Fase 2 (ver PLAN.md), avance parcial: integrate() ya se reparte entre
-// hilos (ver src/paralelo/physics.cpp). resolveCollisions() y buildLinks()
-// siguen secuenciales a proposito, pendientes para Juan y Fabian: son las
-// dos partes que de verdad necesitan un mecanismo de sincronizacion.
+// Las tres etapas de stepSimulation() se reparten entre hilos (ver
+// src/paralelo/physics.cpp): integrate() con un parallel for simple,
+// resolveCollisions() con un lock por elemento, y buildLinks() con un
+// buffer por hilo.
 
 #include <cstdio>
 #include <string>
@@ -45,9 +45,8 @@ int main(int argc, char** argv) {
     if (!renderer.init(config)) return 1;
 
     Metrics metrics;
-    // Hilos que OpenMP va a usar de verdad, no lo que se pidio con -t (que
-    // puede ser 0 = "decida OpenMP"). Con resolveCollisions() y buildLinks()
-    // todavia secuenciales, solo integrate() aprovecha estos hilos por ahora.
+    // Hilos que OpenMP va a usar de verdad, no lo que se pidio con -t
+    // (que puede ser 0 = "decida OpenMP").
     metrics.threads = omp_get_max_threads();
 
     Stopwatch runTimer;    // Duracion total del ciclo principal.

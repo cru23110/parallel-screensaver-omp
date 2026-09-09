@@ -1,24 +1,14 @@
 // Fisica del screensaver, version PARALELA.
 //
-// Fase 2 (ver PLAN.md), avance parcial: se reparte entre hilos el bucle mas
-// simple de los tres, integrate(), porque cada elemento se mueve sin
-// depender de los demas (reparto directo, sin condicion de carrera posible).
-// Quedan pendientes, a proposito, los otros dos:
+// Mismo algoritmo que src/secuencial/physics.cpp, repartido entre hilos con
+// OpenMP en sus tres etapas:
+//   1. integrate()          - mover y rotar cada elemento, rebotar en bordes. O(N)
+//   2. resolveCollisions()  - choques elasticos entre elementos.              O(N^2)
+//   3. buildLinks()         - lineas de conexion de la constelacion.          O(N^2)
 //
-//   1. integrate()          - mover y rotar cada elemento, rebotar en bordes. O(N)   [PARALELIZADO]
-//   2. resolveCollisions()  - choques elasticos entre elementos.              O(N^2) [PENDIENTE - Juan]
-//   3. buildLinks()         - lineas de conexion de la constelacion.          O(N^2) [PENDIENTE - Juan]
-//
-// resolveCollisions() necesita un mecanismo de proteccion de memoria
-// compartida porque cada par de elementos que choca escribe sobre DOS
-// elementos a la vez; buildLinks() necesita que los hilos no se pisen al
-// escribir en el mismo vector de salida (sim.links). Fabian todavia tiene
-// pendiente ajustar el schedule de integrate() si hace falta (ver PLAN.md).
-//
-// El orden entre las tres etapas importa: primero se mueve, luego se
-// corrigen los solapamientos que ese movimiento produjo, y al final se miden
-// distancias sobre las posiciones ya corregidas, para que las lineas
-// coincidan con lo que se ve dibujado.
+// El orden importa: primero se mueve, luego se corrigen los solapamientos que
+// ese movimiento produjo, y al final se miden distancias sobre las posiciones
+// ya corregidas, para que las lineas coincidan con lo que se ve dibujado.
 
 #include <cmath>
 
@@ -33,9 +23,8 @@ constexpr float kMinSeparation = 1e-4f;
 
 // Mueve y gira cada elemento un paso de tiempo, y lo rebota si toco un borde.
 //
-// Cada iteracion solo lee y escribe el elemento 'i': no hay dato compartido
-// entre iteraciones, asi que repartirlas entre hilos con un simple
-// "parallel for" es seguro sin ningun mecanismo de sincronizacion adicional.
+// Cada iteracion solo toca el elemento 'i', asi que repartirla entre hilos es
+// seguro sin ningun mecanismo de sincronizacion.
 void integrate(Simulation& sim, const Config& config, float dt) {
     const float width = static_cast<float>(config.width);
     const float height = static_cast<float>(config.height);
@@ -83,45 +72,60 @@ void integrate(Simulation& sim, const Config& config, float dt) {
 // en lugar de sacar el angulo con atan2 y volver a coseno y seno: es la misma
 // operacion, con menos funciones trigonometricas y sin perder precision al ir
 // y volver del angulo.
+//
+// La actualizacion de a y b se protege con critical: dos hilos podrian tratar
+// de chocar el mismo elemento con otros dos distintos al mismo tiempo.
+//
+// Se probo tambien con un lock por elemento en vez de este critical global,
+// pensando que dejaria correr en paralelo choques sin elementos en comun. En
+// la practica no gano: casi todo el costo de resolveCollisions() esta en el
+// filtro de distancia (de solo lectura, ya paralelo), no en esta seccion
+// critica, que solo se ejecuta en el pequeno porcentaje de pares que de
+// verdad chocan. Con pocos choques reales, el critical global es igual de
+// rapido y mas simple.
 void collide(Element& a, Element& b) {
     const float dx = b.x - a.x;
     const float dy = b.y - a.y;
     const float distanceSquared = dx * dx + dy * dy;
     const float contactDistance = a.radius + b.radius;
 
-    // Se compara para ver si se estan tocando antes de usar raiz
     if (distanceSquared >= contactDistance * contactDistance) return;
     if (distanceSquared < kMinSeparation) return;
 
-    // A partir de aqui se modifican elementos. Dos hilos pueden tratar de
-    // chocar el mismo elemento con otros dos distintos al mismo tiempo.
-    // Protegemos esta modificacion compartida.
     #pragma omp critical
     {
-        // Volvemos a leer y calcular por si otro hilo ya lo movio,
-        // garantizando consistencia
-        const float dx_c = b.x - a.x;
-        const float dy_c = b.y - a.y;
-        const float dSq_c = dx_c * dx_c + dy_c * dy_c;
+        // Se vuelve a medir por si otro hilo ya movio a o b mientras
+        // esperaba entrar aqui.
+        const float dxLocked = b.x - a.x;
+        const float dyLocked = b.y - a.y;
+        const float distanceSquaredLocked = dxLocked * dxLocked + dyLocked * dyLocked;
 
-        if (dSq_c < contactDistance * contactDistance && dSq_c >= kMinSeparation) {
-            const float dist_c = std::sqrt(dSq_c);
-            const float nx_c = dx_c / dist_c;
-            const float ny_c = dy_c / dist_c;
+        if (distanceSquaredLocked < contactDistance * contactDistance &&
+            distanceSquaredLocked >= kMinSeparation) {
+            const float distance = std::sqrt(distanceSquaredLocked);
+            const float nx = dxLocked / distance;
+            const float ny = dyLocked / distance;
 
-            const float approachSpeed = (b.vx - a.vx) * nx_c + (b.vy - a.vy) * ny_c;
+            // Velocidad de b respecto de a, proyectada sobre la normal. Si es
+            // negativa se estan acercando; si es positiva ya se estan
+            // separando y volver a intercambiar velocidades los dejaria
+            // pegados vibrando.
+            const float approachSpeed = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
             if (approachSpeed < 0.0f) {
-                a.vx += approachSpeed * nx_c;
-                a.vy += approachSpeed * ny_c;
-                b.vx -= approachSpeed * nx_c;
-                b.vy -= approachSpeed * ny_c;
+                a.vx += approachSpeed * nx;
+                a.vy += approachSpeed * ny;
+                b.vx -= approachSpeed * nx;
+                b.vy -= approachSpeed * ny;
             }
 
-            const float overlap = 0.5f * (contactDistance - dist_c);
-            a.x -= overlap * nx_c;
-            a.y -= overlap * ny_c;
-            b.x += overlap * nx_c;
-            b.y += overlap * ny_c;
+            // Se separan a partes iguales para deshacer el solapamiento que
+            // dejo el paso de integracion, que da saltos discretos y no se
+            // detiene justo en el punto de contacto.
+            const float overlap = 0.5f * (contactDistance - distance);
+            a.x -= overlap * nx;
+            a.y -= overlap * ny;
+            b.x += overlap * nx;
+            b.y += overlap * ny;
         }
     }
 }
@@ -130,8 +134,9 @@ void collide(Element& a, Element& b) {
 // par dos veces y que un elemento choque contra si mismo.
 void resolveCollisions(Simulation& sim) {
     const int count = static_cast<int>(sim.elements.size());
-    // Se paraleliza con schedule(dynamic) porque las primeras iteraciones de 'i'
-    // hacen mucho mas trabajo (bucle j mas grande) que las ultimas.
+
+    // schedule(dynamic) porque las primeras iteraciones de 'i' hacen mucho
+    // mas trabajo (bucle j mas grande) que las ultimas.
     #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < count; ++i) {
         for (int j = i + 1; j < count; ++j) {
@@ -142,7 +147,8 @@ void resolveCollisions(Simulation& sim) {
 
 // Arma la lista de pares lo bastante cercanos como para unirlos con una linea.
 // Recorre los mismos pares que resolveCollisions pero solo lee posiciones, sin
-// modificar nada: por eso en la version paralela se reparte distinto.
+// modificar nada: por eso no necesita locks, solo un buffer por hilo para no
+// pisarse al escribir en sim.links.
 void buildLinks(Simulation& sim, const Config& config) {
     sim.links.clear();
     if (config.linkDistance <= 0.0f) return;
@@ -151,12 +157,9 @@ void buildLinks(Simulation& sim, const Config& config) {
     const float maxDistance = config.linkDistance;
     const float maxDistanceSquared = maxDistance * maxDistance;
 
-    // A diferencia del anterior, aqui las iteraciones no colisionan datos de
-    // los elementos, pero SI al escribir al vector 'links'. Se paraleliza el
-    // calculo con variables privadas.
     #pragma omp parallel
     {
-        std::vector<Link> local_links;
+        std::vector<Link> localLinks;
 
         #pragma omp for schedule(dynamic)
         for (int i = 0; i < count; ++i) {
@@ -168,14 +171,17 @@ void buildLinks(Simulation& sim, const Config& config) {
                 const float distanceSquared = dx * dx + dy * dy;
                 if (distanceSquared >= maxDistanceSquared) continue;
 
+                // La fuerza va de 1 (pegados) a 0 (justo en el limite) y luego
+                // se traduce en la opacidad de la linea, para que las
+                // conexiones se desvanezcan en vez de aparecer de golpe.
                 const float distance = std::sqrt(distanceSquared);
-                local_links.push_back(Link{i, j, 1.0f - distance / maxDistance});
+                localLinks.push_back(Link{i, j, 1.0f - distance / maxDistance});
             }
         }
 
         #pragma omp critical
         {
-            sim.links.insert(sim.links.end(), local_links.begin(), local_links.end());
+            sim.links.insert(sim.links.end(), localLinks.begin(), localLinks.end());
         }
     }
 }
