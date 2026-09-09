@@ -6,9 +6,9 @@ Screensaver que genera **N** elementos animados con física y trigonometría (mo
 
 ## Integrantes
 
-- [ ] Erick
-- [ ] Fabián
-- [ ] Juan
+- [x] Erick
+- [x] Fabián
+- [x] Juan
 
 ## Qué hace el screensaver
 
@@ -26,27 +26,27 @@ Cada elemento es un polígono neón (triángulo por defecto) que se mueve sobre 
 | Fase | Estado |
 |------|--------|
 | Fase 1 — versión secuencial funcional | Hecha |
-| Fase 2 — versión paralela con OpenMP | Pendiente |
-| Fase 3 — mediciones de speedup y eficiencia | Pendiente |
-| Fase 4 — informe y anexos | Pendiente |
+| Fase 2 — versión paralela con OpenMP | Hecha |
+| Fase 3 — mediciones de speedup y eficiencia | Hecha |
+| Fase 4 — informe y anexos | Hecha |
 
 ## Requisitos del proyecto (checklist)
 
 - [x] Código de autoría propia en C/C++, comentado.
-- [ ] Historial de commits que refleje trabajo distribuido en el tiempo (no todo de última hora).
-- [ ] Uso de OpenMP.
-- [ ] Versión secuencial y al menos una versión paralela.
-- [ ] Cálculo de speedup y eficiencia por versión (mínimo 10 mediciones por prueba).
+- [x] Historial de commits que refleje trabajo distribuido en el tiempo (no todo de última hora).
+- [x] Uso de OpenMP.
+- [x] Versión secuencial y al menos una versión paralela.
+- [x] Cálculo de speedup y eficiencia por versión (mínimo 10 mediciones por prueba).
 - [x] Screensaver: recibe N por parámetro, varios colores pseudoaleatorios, canvas mínimo 640x480, con movimiento y física/trigonometría.
 - [x] Programación defensiva en el ingreso de datos.
 - [x] `readme.md` de uso (este archivo).
 - [x] Sin variables hard-coded: todo parametrizado por argumentos de línea de comandos.
-- [ ] Mecanismos de protección de memoria compartida / sincronía.
-- [ ] Informe (carátula, índice, introducción, antecedentes, cuerpo, citas, conclusiones, apéndices, ≥3 referencias bibliográficas).
-- [ ] Anexo 1: diagrama de flujo.
-- [ ] Anexo 2: catálogo de funciones.
-- [ ] Anexo 3: bitácora de pruebas.
-- [ ] (Opcional, extra hasta 20%) Documentar cualquier optimización adicional con speedups que la respalden.
+- [x] Mecanismos de protección de memoria compartida / sincronía.
+- [ ] Informe (carátula, índice, introducción, antecedentes, cuerpo, citas, conclusiones, apéndices, ≥3 referencias bibliográficas) — confirmar que el PDF ensamblado (fuera de este repo) esté listo.
+- [ ] Anexo 1: diagrama de flujo — falta el archivo en `docs/diagramas/`.
+- [x] Anexo 2: catálogo de funciones (`docs/informe/anexo2_catalogo_funciones.md`).
+- [ ] Anexo 3: bitácora de pruebas — faltan capturas en `resultados/`.
+- [x] (Opcional, extra hasta 20%) Documentar cualquier optimización adicional con speedups que la respalden — ver "Nota sobre sincronía" abajo.
 
 El enunciado completo está en [`docs/enunciado.pdf`](docs/enunciado.pdf).
 
@@ -159,6 +159,8 @@ scripts/benchmark.sh bin/screensaver_par 3000 300 10 resultados/par_3000_8.csv 8
 Con ambos CSV (mínimo 10 corridas cada uno) se calcula `speedup = simulacion_secuencial / simulacion_paralela` y `eficiencia = speedup / hilos`, usando promedio o máximo según el enunciado.
 
 Para que la comparación sea válida, las dos corridas usan la **misma semilla** y el **mismo número de cuadros**, así que recorren exactamente la misma trayectoria y hacen exactamente el mismo trabajo.
+
+Los resultados y el cálculo de speedup/eficiencia de las pruebas ya corridas (distintos N y distintos hilos) están en [`resultados/calculo_speedup.md`](resultados/calculo_speedup.md), junto con una nota sobre por qué se usa un `critical` global en vez de un lock por elemento en `resolveCollisions()` (se probaron los dos, con datos).
 
 ## Convenciones de trabajo
 
