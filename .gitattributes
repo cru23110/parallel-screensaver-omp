@@ -1,0 +1,4 @@
+# scripts/benchmark.sh se corre con bash (Linux, macOS, WSL, Git Bash). Si un
+# Windows con core.autocrlf=true lo revisa a CRLF, "bash scripts/benchmark.sh"
+# falla con errores raros de sintaxis. Se fuerza LF pase lo que pase.
+*.sh text eol=lf
