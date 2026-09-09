@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1560" viewBox="0 0 900 1560" font-family="Arial, Helvetica, sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #333333; stroke-width: 1.5; }
+    .par { fill: #fff2e0; stroke: #d97706; stroke-width: 1.5; }
+    .sync { fill: #fff2e0; stroke: #dc2626; stroke-width: 2.5; }
+    .seq { fill: #e6f0ff; stroke: #1d4ed8; stroke-width: 1.5; }
+    .decision { fill: #f3f4f6; stroke: #333333; stroke-width: 1.5; }
+    .terminal { fill: #111827; stroke: #111827; }
+    .txt { fill: #111827; font-size: 13px; }
+    .txt-white { fill: #ffffff; font-size: 14px; text-anchor: middle; }
+    .txt-b { fill: #111827; font-size: 13px; font-weight: bold; }
+    .small { fill: #4b5563; font-size: 11px; }
+    .arrow { stroke: #333333; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+    .arrow-no { stroke: #b91c1c; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead-red); }
+  </style>
+
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#333333"/>
+    </marker>
+    <marker id="arrowhead-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#b91c1c"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="900" height="1560" fill="#ffffff"/>
+
+  <text x="450" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#111827">
+    Diagrama de flujo — Screensaver paralelo con OpenMP
+  </text>
+
+  <!-- Inicio -->
+  <rect class="terminal" x="380" y="45" width="140" height="34" rx="17"/>
+  <text class="txt-white" x="450" y="67">Inicio</text>
+  <path class="arrow" d="M450,79 L450,100"/>
+
+  <!-- Leer argumentos -->
+  <rect class="box" x="290" y="100" width="320" height="52"/>
+  <text class="txt-b" x="450" y="122" text-anchor="middle">parseArgs()</text>
+  <text class="txt" x="450" y="140" text-anchor="middle">Leer -n -w -h -frames -seed -t -rmin/rmax ...</text>
+  <path class="arrow" d="M450,152 L450,173"/>
+
+  <!-- Validacion defensiva -->
+  <polygon class="decision" points="450,173 610,225 450,277 290,225"/>
+  <text class="txt-b" x="450" y="215" text-anchor="middle">¿Argumentos válidos?</text>
+  <text class="small" x="450" y="232" text-anchor="middle">N en [1,100000], W&#8805;640, H&#8805;480,</text>
+  <text class="small" x="450" y="246" text-anchor="middle">rangos y flags coherentes</text>
+
+  <!-- No -->
+  <path class="arrow-no" d="M610,225 L730,225"/>
+  <text x="655" y="215" font-size="12" fill="#b91c1c" text-anchor="middle">no</text>
+  <rect class="box" x="730" y="199" width="150" height="52" stroke="#b91c1c"/>
+  <text class="txt" x="805" y="221" text-anchor="middle">Mostrar error</text>
+  <text class="txt" x="805" y="238" text-anchor="middle">+ uso, salir</text>
+
+  <!-- Si -->
+  <path class="arrow" d="M450,277 L450,300"/>
+  <text x="465" y="293" font-size="12" fill="#111827">sí</text>
+
+  <!-- Crear simulacion -->
+  <rect class="seq" x="270" y="300" width="360" height="52"/>
+  <text class="txt-b" x="450" y="322" text-anchor="middle">createSimulation() — común a las dos versiones</text>
+  <text class="txt" x="450" y="340" text-anchor="middle">N elementos con posición, velocidad y color aleatorios (semilla)</text>
+  <path class="arrow" d="M450,352 L450,373"/>
+
+  <!-- Ventana SDL -->
+  <rect class="seq" x="290" y="373" width="320" height="42"/>
+  <text class="txt" x="450" y="399" text-anchor="middle">Abrir ventana SDL (Renderer)</text>
+  <path class="arrow" d="M450,415 L450,436"/>
+
+  <!-- Loop check -->
+  <polygon class="decision" points="450,436 630,472 450,508 270,472"/>
+  <text class="txt-b" x="450" y="468" text-anchor="middle">¿Sigue la corrida?</text>
+  <text class="small" x="450" y="484" text-anchor="middle">no se pidió salir y (frames=0 o faltan cuadros)</text>
+
+  <path class="arrow" d="M450,508 L450,528"/>
+  <text x="466" y="522" font-size="12" fill="#111827">sí</text>
+
+  <!-- Loop body container -->
+  <rect x="120" y="528" width="660" height="620" fill="#fafafa" stroke="#9ca3af" stroke-dasharray="4,3"/>
+  <text class="txt-b" x="140" y="548">Por cada cuadro — stepSimulation()</text>
+
+  <!-- integrate -->
+  <rect class="par" x="170" y="560" width="560" height="60"/>
+  <text class="txt-b" x="450" y="580" text-anchor="middle">integrate()  —  #pragma omp parallel for</text>
+  <text class="txt" x="450" y="598" text-anchor="middle">mover, rotar y rebotar cada elemento — sin datos compartidos entre iteraciones</text>
+  <text class="small" x="450" y="613" text-anchor="middle">(no necesita sincronía: cada hilo solo toca su propio elemento)</text>
+  <path class="arrow" d="M450,620 L450,640"/>
+
+  <!-- resolveCollisions -->
+  <rect class="sync" x="170" y="640" width="560" height="76"/>
+  <text class="txt-b" x="450" y="660" text-anchor="middle">resolveCollisions()  —  #pragma omp parallel for schedule(dynamic)</text>
+  <text class="txt" x="450" y="678" text-anchor="middle">colisiones elásticas entre pares de elementos (O(N²))</text>
+  <text class="small" x="450" y="694" text-anchor="middle">SINCRONÍA: #pragma omp critical protege la actualización de posición/</text>
+  <text class="small" x="450" y="708" text-anchor="middle">velocidad de los dos elementos que chocan (memoria compartida)</text>
+  <path class="arrow" d="M450,716 L450,736"/>
+
+  <!-- buildLinks -->
+  <rect class="sync" x="170" y="736" width="560" height="76"/>
+  <text class="txt-b" x="450" y="756" text-anchor="middle">buildLinks()  —  #pragma omp parallel + buffer local por hilo</text>
+  <text class="txt" x="450" y="774" text-anchor="middle">líneas de la constelación (O(N²), solo lectura de posiciones)</text>
+  <text class="small" x="450" y="790" text-anchor="middle">SINCRONÍA: cada hilo junta sus resultados en un buffer propio y</text>
+  <text class="small" x="450" y="804" text-anchor="middle">al final los combina con #pragma omp critical (una sola vez, no por par)</text>
+  <path class="arrow" d="M450,812 L450,832"/>
+
+  <!-- drawFrame -->
+  <rect class="seq" x="170" y="832" width="560" height="60"/>
+  <text class="txt-b" x="450" y="852" text-anchor="middle">drawFrame()  —  secuencial</text>
+  <text class="txt" x="450" y="870" text-anchor="middle">estelas, elementos, líneas, reloj y HUD</text>
+  <text class="small" x="450" y="885" text-anchor="middle">(SDL_Renderer no es thread-safe: se dibuja en el hilo principal)</text>
+  <path class="arrow" d="M450,892 L450,912"/>
+
+  <!-- medir tiempos -->
+  <rect class="box" x="230" y="912" width="440" height="42"/>
+  <text class="txt" x="450" y="938" text-anchor="middle">Medir tiempo de simulación y de dibujo por separado (Stopwatch)</text>
+
+  <!-- loop back arrow -->
+  <path class="arrow" d="M230,933 C160,933 160,472 270,472"/>
+  <text x="150" y="700" font-size="12" fill="#111827" transform="rotate(-90 150 700)">siguiente cuadro</text>
+
+  <!-- exit loop -->
+  <path class="arrow-no" d="M630,472 L800,472 L800,1000"/>
+  <text x="720" y="462" font-size="12" fill="#b91c1c" text-anchor="middle">no (se cerró la ventana o se acabaron los cuadros)</text>
+
+  <!-- resultados -->
+  <path class="arrow" d="M800,1000 L800,1000"/>
+  <rect class="seq" x="620" y="1000" width="260" height="60"/>
+  <text class="txt-b" x="750" y="1022" text-anchor="middle">Despliegue de resultados</text>
+  <text class="txt" x="750" y="1040" text-anchor="middle">Imprimir resumen (tiempos) y</text>
+  <text class="txt" x="750" y="1054" text-anchor="middle">línea "CSV,..." para el benchmark</text>
+  <path class="arrow" d="M750,1060 L750,1080"/>
+
+  <!-- shot -->
+  <rect class="box" x="620" y="1080" width="260" height="42"/>
+  <text class="txt" x="750" y="1106" text-anchor="middle">Guardar captura BMP si se pidió -shot</text>
+  <path class="arrow" d="M750,1122 L750,1143"/>
+
+  <!-- fin -->
+  <rect class="terminal" x="680" y="1143" width="140" height="34" rx="17"/>
+  <text class="txt-white" x="750" y="1165">Fin</text>
+
+  <!-- Leyenda -->
+  <text class="txt-b" x="140" y="1220">Leyenda</text>
+  <rect class="seq" x="140" y="1235" width="26" height="18"/>
+  <text class="txt" x="176" y="1249">Secuencial (igual en las dos versiones)</text>
+  <rect class="par" x="140" y="1265" width="26" height="18"/>
+  <text class="txt" x="176" y="1279">Paralelo con OpenMP</text>
+  <rect class="sync" x="140" y="1295" width="26" height="18"/>
+  <text class="txt" x="176" y="1309">Paralelo con OpenMP + sección de sincronía (omp critical)</text>
+  <polygon class="decision" points="153,1330 176,1340 153,1350 130,1340"/>
+  <text class="txt" x="186" y="1345">Decisión / validación</text>
+
+  <text class="small" x="140" y="1390">
+    La versión secuencial (src/secuencial/physics.cpp) ejecuta las mismas tres etapas de stepSimulation()
+  </text>
+  <text class="small" x="140" y="1406">
+    sin directivas de OpenMP, como línea base para calcular el speedup. Las banderas de línea de comandos,
+  </text>
+  <text class="small" x="140" y="1422">
+    la validación defensiva y la creación de elementos (src/common/) son idénticas en ambas versiones.
+  </text>
+</svg>
